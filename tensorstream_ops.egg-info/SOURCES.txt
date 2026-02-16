@@ -1,0 +1,6 @@
+setup.py
+src/voxel_ops.cpp
+tensorstream_ops.egg-info/PKG-INFO
+tensorstream_ops.egg-info/SOURCES.txt
+tensorstream_ops.egg-info/dependency_links.txt
+tensorstream_ops.egg-info/top_level.txt
