@@ -1,6 +1,7 @@
 #include <torch/extension.h>
 #include <vector>
 #include <map>
+#include <fstream>
 
 // C++ function to perform Voxel Grid Downsampling
 // Input:  points (N, 3) tensor of floats
@@ -62,7 +63,34 @@ torch::Tensor voxel_downsample_cpu(torch::Tensor points, float voxel_size) {
     return output_tensor;
 }
 
-// Bindings to Python
+torch::Tensor load_kitti_bin(std::string filename) {
+    std::ifstream input(filename, std::ios::binary);
+    if (!input.good()) {
+        throw std::runtime_error("Could not open file: " + filename);
+    }
+
+    // Get file size
+    input.seekg(0, std::ios::end);
+    size_t size = input.tellg();
+    input.seekg(0, std::ios::beg);
+
+    // Calculate number of float32s (each point has 4 floats: x, y, z, intensity)
+    size_t num_floats = size / sizeof(float);
+    size_t num_points = num_floats / 4;
+
+    // Allocate buffer and read
+    std::vector<float> buffer(num_floats);
+    input.read(reinterpret_cast<char*>(buffer.data()), size);
+    input.close();
+
+    // Convert to Tensor (N, 4)
+    auto opts = torch::TensorOptions().dtype(torch::kFloat32);
+    // Clone is necessary here to own the memory in Python
+    return torch::from_blob(buffer.data(), {static_cast<long>(num_points), 4}, opts).clone();
+}
+
+// Python Bindings
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("voxel_downsample", &voxel_downsample_cpu, "Voxel Grid Downsampling (CPU)");
+  m.def("voxel_downsample", &voxel_downsample_cpu, "Voxel Downsample (CPU)");
+  m.def("load_kitti_bin", &load_kitti_bin, "Load KITTI Binary File");
 }
